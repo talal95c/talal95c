@@ -1,13 +1,13 @@
 """Generate the animated SVGs of the profile README (light + dark).
 
-Run by .github/workflows/update.yml every day. Without GITHUB_TOKEN the
-cached data/contributions.json is reused.
+Run by .github/workflows/update.yml every 6 hours. Without GITHUB_TOKEN the
+cached files in data/ are reused.
 """
 
 import datetime as dt
 import json
+import math
 import os
-import textwrap
 import urllib.request
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -15,79 +15,27 @@ from xml.sax.saxutils import escape
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
 CACHE = ROOT / "data" / "contributions.json"
+DEEPML = "https://raw.githubusercontent.com/talal95c/deep-ml/main/progress.json"
+DEEPML_CACHE = ROOT / "data" / "deepml.json"
 USER = os.environ.get("GH_USER", "talal95c")
 W = 840
 
 FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans',Helvetica,Arial,sans-serif"
+MONO = "ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace"
 EASE = "cubic-bezier(.2,.8,.2,1)"
 
 THEMES = {
     "light": {
-        "bg": "#ffffff", "border": "#d1d9e0", "text": "#1f2328",
+        "bg": "#ffffff", "chrome": "#f6f8fa", "border": "#d1d9e0", "text": "#1f2328",
         "muted": "#59636e", "faint": "#818b98", "accent": "#1a7f37",
         "heat": ["#eff2f5", "#aceebb", "#4ac26b", "#2da44e", "#116329"],
     },
     "dark": {
-        "bg": "#0d1117", "border": "#3d444d", "text": "#f0f6fc",
+        "bg": "#0d1117", "chrome": "#151b23", "border": "#3d444d", "text": "#f0f6fc",
         "muted": "#9198a1", "faint": "#656c76", "accent": "#3fb950",
         "heat": ["#151b23", "#033a16", "#196c2e", "#2ea043", "#56d364"],
     },
 }
-
-PROJECTS = [
-    {
-        "slug": "legible", "name": "Legible",
-        "badge": "Speaker attribution · 224-question benchmark",
-        "desc": "Legal AI for French court rulings: it tells who said what, then "
-                "answers with cited paragraphs. 4× fewer misattributions than a plain LLM.",
-        "stack": "Python · FastAPI · Mistral · Jev · MCP",
-    },
-    {
-        "slug": "adib", "name": "Adib",
-        "badge": "Spaced repetition · web and iOS",
-        "desc": "Arabic and Quran vocabulary app for web and iOS, built on "
-                "word-by-word learning, spaced repetition and daily streaks.",
-        "stack": "Next.js · Supabase · Capacitor · iOS",
-    },
-    {
-        "slug": "sylo", "name": "Sylo.ai",
-        "badge": "Payment risk · on-chain escrow",
-        "desc": "Cross-border B2B payment router: the cheapest compliant route when "
-                "all is fine, an escrow window to stop the money when something is wrong.",
-        "stack": "FastAPI · Next.js · Three.js · Solidity · LightGBM",
-    },
-    {
-        "slug": "miropolis", "name": "MiroPolis",
-        "badge": "Multi-agent simulation",
-        "desc": "Multi-agent digital twin of the French National Assembly: AI deputies "
-                "debate, amend and vote on a bill before the real vote.",
-        "stack": "Python · Flask · OASIS · LLM agents · Vue · D3",
-    },
-]
-
-
-ROLES = [
-    "AI Engineer at Safran Aircraft Engines",
-    "Computer science engineering student at CY Tech",
-    "Founder of Adib, an Arabic vocabulary app",
-]
-DEEPML = "https://raw.githubusercontent.com/talal95c/deep-ml/main/progress.json"
-DEEPML_CACHE = ROOT / "data" / "deepml.json"
-README = ROOT / "README.md"
-
-
-def highlight_items(data, deepml):
-    solved = len(deepml["items"])
-    return [
-        {"from": 0, "to": solved, "fmt": lambda v: f"{round(v)}",
-         "label": "ML problems solved", "sub": "by hand, on Deep-ML"},
-        {"from": 1, "to": 4, "fmt": lambda v: f"{v:.1f}×" if v < 4 else "4×",
-         "label": "fewer misattributions", "sub": "Legible vs. a plain LLM"},
-        {"from": 0, "to": data["commits"], "fmt": lambda v: f"{round(v):,}",
-         "label": "commits", "sub": "in the last 12 months"},
-        {"from": 0, "to": data["repos"], "fmt": lambda v: f"{round(v)}",
-         "label": "repositories", "sub": "with commits this year"},
-    ]
 
 
 def ease_out(p):
@@ -115,6 +63,87 @@ def svg(width, height, css, body, title):
     )
 
 
+def donut_frames(n=48, cols=42, rows=21, scale=150, cw=6.3, lh=11.4):
+    """Frames of the classic donut.c torus, one full turn so the loop is seamless."""
+    chars = ".,-~:;=!*#$@"
+    frames = []
+    for f in range(n):
+        a = b = 2 * math.pi * f / n
+        out = [[" "] * cols for _ in range(rows)]
+        zbuf = [[0.0] * cols for _ in range(rows)]
+        ca, sa, cb, sb = math.cos(a), math.sin(a), math.cos(b), math.sin(b)
+        for j in range(0, 628, 7):
+            ct, st = math.cos(j / 100), math.sin(j / 100)
+            for i in range(0, 628, 2):
+                cp, sp = math.cos(i / 100), math.sin(i / 100)
+                h = ct + 2
+                d = 1 / (sp * h * sa + st * ca + 5)
+                tt = sp * h * ca - st * sa
+                x = int(cols / 2 + scale / cw * d * (cp * h * cb - tt * sb))
+                y = int(rows / 2 + scale / lh * d * (cp * h * sb + tt * cb))
+                lum = int(8 * ((st * sa - sp * ct * ca) * cb - sp * ct * sa - st * ca - cp * ct * sb))
+                if 0 <= y < rows and 0 <= x < cols and d > zbuf[y][x]:
+                    zbuf[y][x] = d
+                    out[y][x] = chars[max(lum, 0)]
+        frames.append(["".join(r).rstrip() for r in out])
+    return frames
+
+
+def terminal(t, info):
+    h = 320
+    frames = donut_frames()
+    n, period = len(frames), 4.8
+    css = base_css(t) + f"""
+.mono,.mono text{{font-family:{MONO};white-space:pre}}
+.d{{fill:{t['muted']};opacity:0;animation:fr {period}s step-end infinite}}
+@keyframes fr{{0%{{opacity:1}}{100 / n:.3f}%{{opacity:0}}100%{{opacity:0}}}}
+.k{{fill:{t['accent']};font-weight:700}}
+.line{{opacity:0;animation:type .35s steps(1) forwards}}
+@keyframes type{{to{{opacity:1}}}}
+.reveal{{animation:wipe .5s steps(24) forwards}}
+@keyframes wipe{{from{{width:0}}to{{width:520px}}}}
+.cursor{{fill:{t['text']};animation:blink 1.1s step-end infinite}}
+@keyframes blink{{50%{{opacity:0}}}}
+@media (prefers-reduced-motion:reduce){{.d{{opacity:0}} .d0{{opacity:1}} .line{{opacity:1}}}}"""
+    body = [
+        f'<rect x="0.5" y="0.5" width="{W - 1}" height="{h - 1}" rx="12" fill="{t["bg"]}" stroke="{t["border"]}"/>',
+        f'<path d="M0.5 36V12.5a12 12 0 0 1 12-12h{W - 25}a12 12 0 0 1 12 12V36z" fill="{t["chrome"]}"/>',
+        f'<line x1="0.5" y1="36" x2="{W - 0.5}" y2="36" stroke="{t["border"]}"/>',
+    ]
+    for k, c in enumerate(["#ff5f57", "#febc2e", "#28c840"]):
+        body.append(f'<circle cx="{20 + k * 18}" cy="18" r="5.5" fill="{c}"/>')
+    body.append(f'<text class="muted mono" x="{W / 2}" y="22.5" font-size="12" text-anchor="middle">talal@paris: ~</text>')
+    body.append('<g class="mono" font-size="10.5">')
+    for i, frame in enumerate(frames):
+        lines = "".join(
+            f'<text x="24" y="{64 + r * 11.4:.1f}" xml:space="preserve">{escape(row)}</text>'
+            for r, row in enumerate(frame) if row.strip()
+        )
+        body.append(f'<g class="d d{i}" style="animation-delay:{-period * i / n:.3f}s">{lines}</g>')
+    body.append("</g>")
+    x0, y0, lh = 316, 80, 24
+    body.append(f'<text class="mono line" x="{x0}" y="{y0}" font-size="14"><tspan class="k">talal</tspan>@<tspan class="k">paris</tspan></text>')
+    body.append(f'<text class="mono line faint" x="{x0}" y="{y0 + 18}" font-size="14" style="animation-delay:.15s">{"─" * 11}</text>')
+    for i, (key, value) in enumerate(info):
+        y = y0 + 18 + lh * (i + 1)
+        body.append(
+            f'<text class="mono line" x="{x0}" y="{y}" font-size="14" style="animation-delay:{0.3 + i * 0.22:.2f}s">'
+            f'<tspan class="k">{escape(key):<9}</tspan> {escape(value)}</text>'
+        )
+    yc = y0 + 18 + lh * (len(info) + 1) + 6
+    delay = 0.3 + len(info) * 0.22
+    body.append(f'<g class="line" style="animation-delay:{delay:.2f}s">')
+    for k, c in enumerate(t["heat"][1:] + [t["muted"], t["text"]]):
+        body.append(f'<rect x="{x0 + k * 22}" y="{yc - 12}" width="18" height="12" rx="2" fill="{c}"/>')
+    body.append("</g>")
+    body.append(
+        f'<text class="mono line" x="{x0}" y="{yc + 30}" font-size="14" style="animation-delay:{delay + 0.2:.2f}s">'
+        f'<tspan class="k">$</tspan></text>'
+        f'<rect class="cursor line" x="{x0 + 16}" y="{yc + 18}" width="8" height="15" style="animation:type .35s steps(1) {delay + 0.2:.2f}s forwards,blink 1.1s step-end {delay + 0.2:.2f}s infinite"/>'
+    )
+    return svg(W, h, css, "".join(body), "talal@paris — neofetch")
+
+
 def counter(x, y, start, end, fmt, size, delay, dur=1.4, frames=28, anchor="start", weight=700):
     """Count-up: one text per frame, each shown during its own time window."""
     step = dur / (frames - 1)
@@ -132,76 +161,6 @@ def counter(x, y, start, end, fmt, size, delay, dur=1.4, frames=28, anchor="star
         )
     return "".join(out)
 
-
-def header(t):
-    css = base_css(t) + f"""
-.dot{{fill:{t['accent']}}}
-.pulse{{fill:{t['accent']};transform-origin:center;transform-box:fill-box;animation:pulse 2s ease-out infinite}}
-@keyframes pulse{{from{{opacity:.6;transform:scale(1)}}to{{opacity:0;transform:scale(3)}}}}
-.role{{opacity:0;animation:role {len(ROLES) * 3}s {EASE} infinite}}
-@keyframes role{{0%{{opacity:0;transform:translateY(8px)}}4%,21%{{opacity:1;transform:none}}
-25%{{opacity:0;transform:translateY(-8px)}}100%{{opacity:0}}}}
-.line{{stroke:{t['text']};stroke-dasharray:56;stroke-dashoffset:56;animation:draw .9s {EASE} .5s forwards}}
-@keyframes draw{{to{{stroke-dashoffset:0}}}}
-@media (prefers-reduced-motion:reduce){{.role{{opacity:0}} .role.r0{{opacity:1}} .line{{stroke-dashoffset:0}}}}"""
-    pill_w = 130
-    body = [
-        f'<g class="rise"><rect x="{(W - pill_w) / 2}" y="14" width="{pill_w}" height="28" rx="14" '
-        f'fill="none" stroke="{t["border"]}"/>'
-        f'<circle class="pulse" cx="{(W - pill_w) / 2 + 18}" cy="28" r="3.5"/>'
-        f'<circle class="dot" cx="{(W - pill_w) / 2 + 18}" cy="28" r="3.5"/>'
-        f'<text class="muted" x="{(W - pill_w) / 2 + 31}" y="32.5" font-size="12.5" font-weight="500">'
-        f"Paris, France</text></g>",
-        f'<text class="rise" x="{W / 2}" y="104" text-anchor="middle" font-size="56" font-weight="700" '
-        f'letter-spacing="-2" style="animation-delay:.1s">Talal Aamir</text>',
-        f'<line class="line" x1="{W / 2 - 28}" y1="126" x2="{W / 2 + 28}" y2="126" stroke-width="2" stroke-linecap="round"/>',
-    ]
-    for i, role in enumerate(ROLES):
-        body.append(
-            f'<text class="role r{i} muted" x="{W / 2}" y="166" text-anchor="middle" font-size="19" '
-            f'style="animation-delay:{0.6 + i * 3}s">{escape(role)}</text>'
-        )
-    return svg(W, 190, css, "".join(body), "Talal Aamir — AI engineer")
-
-
-def highlights(t, items):
-    gap, h = 12, 132
-    tw = (W - gap * 3) / 4
-    css = base_css(t)
-    body = []
-    for i, item in enumerate(items):
-        x = i * (tw + gap)
-        d = 0.08 * i
-        body.append(
-            f'<g class="rise" style="animation-delay:{d:.2f}s">'
-            f'<rect x="{x + 0.5}" y="0.5" width="{tw - 1}" height="{h - 1}" rx="14" fill="{t["bg"]}" stroke="{t["border"]}"/>'
-            + counter(x + 20, 58, item["from"], item["to"], item["fmt"], 34, 0.25 + d)
-            + f'<text x="{x + 20}" y="88" font-size="14" font-weight="600">{escape(item["label"])}</text>'
-            f'<text class="faint" x="{x + 20}" y="108" font-size="12.5">{escape(item["sub"])}</text></g>'
-        )
-    return svg(W, h, css, "".join(body), "Highlights")
-
-
-def project_card(p, t, delay):
-    cw, ch = 410, 200
-    badge_w = len(p["badge"]) * 5.9 + 24
-    lines = textwrap.wrap(p["desc"], 52)
-    assert len(lines) <= 3, p["name"]
-    css = base_css(t) + f"""
-.arrow{{animation:nudge 2.4s {EASE} 1.2s infinite}}
-@keyframes nudge{{0%,70%,100%{{transform:none}}80%{{transform:translate(3px,-3px)}}}}"""
-    body = [
-        f'<g class="rise" style="animation-delay:{delay}s">',
-        f'<rect x="0.5" y="0.5" width="{cw - 1}" height="{ch - 1}" rx="14" fill="{t["bg"]}" stroke="{t["border"]}"/>',
-        f'<text x="24" y="44" font-size="22" font-weight="700" letter-spacing="-0.5">{escape(p["name"])}</text>',
-        f'<text class="arrow faint" x="{cw - 24}" y="42" font-size="18" text-anchor="end">↗</text>',
-        f'<rect x="24.5" y="58.5" width="{badge_w:.0f}" height="23" rx="11.5" fill="none" stroke="{t["border"]}"/>',
-        f'<text class="muted" x="36" y="74.5" font-size="12" font-weight="500">{escape(p["badge"])}</text>',
-    ]
-    for j, line in enumerate(lines):
-        body.append(f'<text class="muted" x="24" y="{112 + j * 21}" font-size="14">{escape(line)}</text>')
-    body.append(f'<text class="faint" x="24" y="{ch - 22}" font-size="12" font-weight="500">{escape(p["stack"])}</text></g>')
-    return svg(cw, ch, css, "".join(body), f'{p["name"]} — {p["badge"]}')
 
 
 def fetch_calendar():
@@ -233,6 +192,7 @@ def fetch_calendar():
     }
     CACHE.write_text(json.dumps(data, separators=(",", ":")) + "\n")
     return data
+
 
 
 def activity(t, data):
@@ -283,8 +243,10 @@ def activity(t, data):
         body.append(f'<rect x="{lx + k * pitch}" y="{ly}" width="{cell}" height="{cell}" rx="2.5" fill="{t["heat"][k]}"/>')
     body.append(f'<text class="faint" x="{lx + 5 * pitch + 4}" y="{ly + 9}" font-size="11">More</text>')
     today = days[-1][0] if days else ""
-    body.append(f'<text class="faint" x="{gx}" y="{ly + 9}" font-size="11">Updated daily · {today}</text>')
+    body.append(f'<text class="faint" x="{gx}" y="{ly + 9}" font-size="11">Updated {today}</text>')
     return svg(W, h, css, "".join(body), f'{data["total"]} contributions in the last year')
+
+
 
 
 def fetch_deepml():
@@ -297,34 +259,21 @@ def fetch_deepml():
     return data
 
 
-def research_log(deepml, limit=5):
-    items = sorted(deepml["items"].values(), key=lambda i: i["first_solved_at"], reverse=True)[:limit]
-    rows = ["| Solved | Problem | Topic |", "| --- | --- | --- |"]
-    for i in items:
-        link = f"https://github.com/talal95c/deep-ml/tree/main/{i['path']}"
-        rows.append(f"| {i['first_solved_at'][:10]} | [{i['title']}]({link}) | {i['category']} · {i['difficulty']} |")
-    return "\n".join(rows)
-
-
-def update_readme(deepml):
-    text = README.read_text()
-    start, end = "<!-- research-log:start -->", "<!-- research-log:end -->"
-    head, rest = text.split(start)
-    _, tail = rest.split(end)
-    README.write_text(f"{head}{start}\n{research_log(deepml)}\n{end}{tail}")
-
-
 def main():
     ASSETS.mkdir(exist_ok=True)
     data = fetch_calendar()
     deepml = fetch_deepml()
-    update_readme(deepml)
+    info = [
+        ("role", "AI Engineer @ Safran Aircraft Engines"),
+        ("school", "CS engineering @ CY Tech, Paris"),
+        ("building", "Adib, an Arabic & Quran vocab app"),
+        ("learning", f"ML from scratch · {len(deepml['items'])} Deep-ML problems"),
+        ("focus", "agentic AI · NLP · evals"),
+        ("commits", f"{data['commits']:,} in the last 12 months"),
+    ]
     for name, t in THEMES.items():
-        (ASSETS / f"header-{name}.svg").write_text(header(t))
-        (ASSETS / f"highlights-{name}.svg").write_text(highlights(t, highlight_items(data, deepml)))
+        (ASSETS / f"terminal-{name}.svg").write_text(terminal(t, info))
         (ASSETS / f"activity-{name}.svg").write_text(activity(t, data))
-        for i, p in enumerate(PROJECTS):
-            (ASSETS / f"project-{p['slug']}-{name}.svg").write_text(project_card(p, t, 0.08 * i))
 
 
 if __name__ == "__main__":

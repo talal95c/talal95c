@@ -1,4 +1,4 @@
-name: Update profile cards
+name: Update profile README
 
 on:
   schedule:
@@ -27,5 +27,5 @@ jobs:
           git diff --quiet && exit 0
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore: refresh profile cards"
+          git commit -am "chore: refresh profile README"
           git push
