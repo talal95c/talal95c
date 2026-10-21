@@ -37,55 +37,57 @@ THEMES = {
 PROJECTS = [
     {
         "slug": "legible", "name": "Legible",
-        "badge": "Winner · Mistral × Stanford Law",
-        "tint": {"light": ("#ffe1cc", "#8a3f0e"), "dark": ("#3b2313", "#ffb98a")},
+        "badge": "Speaker attribution · 224-question benchmark",
         "desc": "Legal AI for French court rulings: it tells who said what, then "
                 "answers with cited paragraphs. 4× fewer misattributions than a plain LLM.",
         "stack": "Python · FastAPI · Mistral · Jev · MCP",
     },
     {
         "slug": "adib", "name": "Adib",
-        "badge": "1,000+ users in 24 hours",
-        "tint": {"light": ("#f1e7d3", "#6b4d12"), "dark": ("#33291a", "#e9c98a")},
+        "badge": "Spaced repetition · web and iOS",
         "desc": "Arabic and Quran vocabulary app for web and iOS, built on "
                 "word-by-word learning, spaced repetition and daily streaks.",
         "stack": "Next.js · Supabase · Capacitor · iOS",
     },
     {
         "slug": "sylo", "name": "Sylo.ai",
-        "badge": "Secure Horizons hackathon · ESSEC",
-        "tint": {"light": ("#dbe3ff", "#2b3f99"), "dark": ("#1c2445", "#a9b9ff")},
+        "badge": "Payment risk · on-chain escrow",
         "desc": "Cross-border B2B payment router: the cheapest compliant route when "
                 "all is fine, an escrow window to stop the money when something is wrong.",
         "stack": "FastAPI · Next.js · Three.js · Solidity · LightGBM",
     },
     {
         "slug": "miropolis", "name": "MiroPolis",
-        "badge": "Top project · French National Assembly",
-        "tint": {"light": ("#dfe8f5", "#24476f"), "dark": ("#18263a", "#9fc2ea")},
+        "badge": "Multi-agent simulation",
         "desc": "Multi-agent digital twin of the French National Assembly: AI deputies "
                 "debate, amend and vote on a bill before the real vote.",
         "stack": "Python · Flask · OASIS · LLM agents · Vue · D3",
     },
 ]
 
-HIGHLIGHTS = [
-    {"from": 0, "to": 4, "fmt": lambda v: f"{round(v)}",
-     "label": "hackathon podiums", "sub": "1st · Mistral × Stanford"},
-    {"from": 0, "to": 1000, "fmt": lambda v: f"{round(v):,}+",
-     "label": "Adib users", "sub": "in the first 24 hours"},
-    {"from": 0, "to": 14.8, "fmt": lambda v: f"{v:.1f}K",
-     "label": "TikTok followers", "sub": "2.8M views in a year"},
-    {"from": 50, "to": 5, "fmt": lambda v: f"Top {round(v)}%",
-     "label": "engineering cohort", "sub": "CY Tech, Paris"},
-]
 
 ROLES = [
-    "AI Engineer apprentice at Safran Aircraft Engines",
-    "Computer science engineering student at CY Tech, Paris",
-    "Winner of the Mistral × Stanford Law School hackathon",
-    "Building Adib, an Arabic and Quran vocabulary app",
+    "AI Engineer at Safran Aircraft Engines",
+    "Computer science engineering student at CY Tech",
+    "Founder of Adib, an Arabic vocabulary app",
 ]
+DEEPML = "https://raw.githubusercontent.com/talal95c/deep-ml/main/progress.json"
+DEEPML_CACHE = ROOT / "data" / "deepml.json"
+README = ROOT / "README.md"
+
+
+def highlight_items(data, deepml):
+    solved = len(deepml["items"])
+    return [
+        {"from": 0, "to": solved, "fmt": lambda v: f"{round(v)}",
+         "label": "ML problems solved", "sub": "by hand, on Deep-ML"},
+        {"from": 1, "to": 4, "fmt": lambda v: f"{v:.1f}×" if v < 4 else "4×",
+         "label": "fewer misattributions", "sub": "Legible vs. a plain LLM"},
+        {"from": 0, "to": data["commits"], "fmt": lambda v: f"{round(v):,}",
+         "label": "commits", "sub": "in the last 12 months"},
+        {"from": 0, "to": data["repos"], "fmt": lambda v: f"{round(v)}",
+         "label": "repositories", "sub": "with commits this year"},
+    ]
 
 
 def ease_out(p):
@@ -142,14 +144,14 @@ def header(t):
 .line{{stroke:{t['text']};stroke-dasharray:56;stroke-dashoffset:56;animation:draw .9s {EASE} .5s forwards}}
 @keyframes draw{{to{{stroke-dashoffset:0}}}}
 @media (prefers-reduced-motion:reduce){{.role{{opacity:0}} .role.r0{{opacity:1}} .line{{stroke-dashoffset:0}}}}"""
-    pill_w = 182
+    pill_w = 130
     body = [
         f'<g class="rise"><rect x="{(W - pill_w) / 2}" y="14" width="{pill_w}" height="28" rx="14" '
         f'fill="none" stroke="{t["border"]}"/>'
         f'<circle class="pulse" cx="{(W - pill_w) / 2 + 18}" cy="28" r="3.5"/>'
         f'<circle class="dot" cx="{(W - pill_w) / 2 + 18}" cy="28" r="3.5"/>'
         f'<text class="muted" x="{(W - pill_w) / 2 + 31}" y="32.5" font-size="12.5" font-weight="500">'
-        f"Paris · building Adib</text></g>",
+        f"Paris, France</text></g>",
         f'<text class="rise" x="{W / 2}" y="104" text-anchor="middle" font-size="56" font-weight="700" '
         f'letter-spacing="-2" style="animation-delay:.1s">Talal Aamir</text>',
         f'<line class="line" x1="{W / 2 - 28}" y1="126" x2="{W / 2 + 28}" y2="126" stroke-width="2" stroke-linecap="round"/>',
@@ -162,12 +164,12 @@ def header(t):
     return svg(W, 190, css, "".join(body), "Talal Aamir — AI engineer")
 
 
-def highlights(t):
+def highlights(t, items):
     gap, h = 12, 132
     tw = (W - gap * 3) / 4
     css = base_css(t)
     body = []
-    for i, item in enumerate(HIGHLIGHTS):
+    for i, item in enumerate(items):
         x = i * (tw + gap)
         d = 0.08 * i
         body.append(
@@ -182,8 +184,7 @@ def highlights(t):
 
 def project_card(p, t, delay):
     cw, ch = 410, 200
-    bg, fg = p["tint"][t is THEMES["dark"] and "dark" or "light"]
-    badge_w = len(p["badge"]) * 6.7 + 24
+    badge_w = len(p["badge"]) * 5.9 + 24
     lines = textwrap.wrap(p["desc"], 52)
     assert len(lines) <= 3, p["name"]
     css = base_css(t) + f"""
@@ -194,8 +195,8 @@ def project_card(p, t, delay):
         f'<rect x="0.5" y="0.5" width="{cw - 1}" height="{ch - 1}" rx="14" fill="{t["bg"]}" stroke="{t["border"]}"/>',
         f'<text x="24" y="44" font-size="22" font-weight="700" letter-spacing="-0.5">{escape(p["name"])}</text>',
         f'<text class="arrow faint" x="{cw - 24}" y="42" font-size="18" text-anchor="end">↗</text>',
-        f'<rect x="24" y="58" width="{badge_w:.0f}" height="24" rx="12" fill="{bg}"/>',
-        f'<text x="36" y="74.5" font-size="12" font-weight="600" style="fill:{fg}">{escape(p["badge"])}</text>',
+        f'<rect x="24.5" y="58.5" width="{badge_w:.0f}" height="23" rx="11.5" fill="none" stroke="{t["border"]}"/>',
+        f'<text class="muted" x="36" y="74.5" font-size="12" font-weight="500">{escape(p["badge"])}</text>',
     ]
     for j, line in enumerate(lines):
         body.append(f'<text class="muted" x="24" y="{112 + j * 21}" font-size="14">{escape(line)}</text>')
@@ -208,7 +209,8 @@ def fetch_calendar():
     if not token:
         return json.loads(CACHE.read_text())
     query = (
-        "query($login:String!){user(login:$login){contributionsCollection{contributionCalendar{"
+        "query($login:String!){user(login:$login){contributionsCollection{"
+        "totalCommitContributions totalRepositoriesWithContributedCommits contributionCalendar{"
         "totalContributions weeks{contributionDays{date contributionCount contributionLevel}}}}}}"
     )
     req = urllib.request.Request(
@@ -217,10 +219,13 @@ def fetch_calendar():
         headers={"Authorization": f"bearer {token}", "Content-Type": "application/json"},
     )
     with urllib.request.urlopen(req, timeout=30) as res:
-        cal = json.load(res)["data"]["user"]["contributionsCollection"]["contributionCalendar"]
+        coll = json.load(res)["data"]["user"]["contributionsCollection"]
+    cal = coll["contributionCalendar"]
     levels = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2, "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
     data = {
         "total": cal["totalContributions"],
+        "commits": coll["totalCommitContributions"],
+        "repos": coll["totalRepositoriesWithContributedCommits"],
         "weeks": [
             [[d["date"], d["contributionCount"], levels[d["contributionLevel"]]] for d in w["contributionDays"]]
             for w in cal["weeks"]
@@ -282,12 +287,41 @@ def activity(t, data):
     return svg(W, h, css, "".join(body), f'{data["total"]} contributions in the last year')
 
 
+def fetch_deepml():
+    try:
+        with urllib.request.urlopen(DEEPML, timeout=30) as res:
+            data = json.load(res)
+    except OSError:
+        return json.loads(DEEPML_CACHE.read_text())
+    DEEPML_CACHE.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n")
+    return data
+
+
+def research_log(deepml, limit=5):
+    items = sorted(deepml["items"].values(), key=lambda i: i["first_solved_at"], reverse=True)[:limit]
+    rows = ["| Solved | Problem | Topic |", "| --- | --- | --- |"]
+    for i in items:
+        link = f"https://github.com/talal95c/deep-ml/tree/main/{i['path']}"
+        rows.append(f"| {i['first_solved_at'][:10]} | [{i['title']}]({link}) | {i['category']} · {i['difficulty']} |")
+    return "\n".join(rows)
+
+
+def update_readme(deepml):
+    text = README.read_text()
+    start, end = "<!-- research-log:start -->", "<!-- research-log:end -->"
+    head, rest = text.split(start)
+    _, tail = rest.split(end)
+    README.write_text(f"{head}{start}\n{research_log(deepml)}\n{end}{tail}")
+
+
 def main():
     ASSETS.mkdir(exist_ok=True)
     data = fetch_calendar()
+    deepml = fetch_deepml()
+    update_readme(deepml)
     for name, t in THEMES.items():
         (ASSETS / f"header-{name}.svg").write_text(header(t))
-        (ASSETS / f"highlights-{name}.svg").write_text(highlights(t))
+        (ASSETS / f"highlights-{name}.svg").write_text(highlights(t, highlight_items(data, deepml)))
         (ASSETS / f"activity-{name}.svg").write_text(activity(t, data))
         for i, p in enumerate(PROJECTS):
             (ASSETS / f"project-{p['slug']}-{name}.svg").write_text(project_card(p, t, 0.08 * i))
