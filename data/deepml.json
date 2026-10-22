@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-22T08:44:21.497Z",
+ "generated_at": "2026-10-22T13:57:23.336Z",
  "items": {
   "math:34": {
    "kind": "math",
@@ -172,6 +172,45 @@
    "last_pushed_at": "2026-10-22T08:44:20.946Z",
    "language": "python",
    "lines": 65
+  },
+  "problem:802": {
+   "kind": "problem",
+   "id": "802",
+   "title": "Stochastic Gradient Descent Step for Linear Regression",
+   "difficulty": "medium",
+   "category": "Machine Learning",
+   "url": "https://www.deep-ml.com/problems/802",
+   "path": "problems/0802-stochastic-gradient-descent-step-for-linear-regression",
+   "first_solved_at": "2026-10-22T12:10:21.917Z",
+   "last_pushed_at": "2026-10-22T13:32:29.517Z",
+   "language": "python",
+   "lines": 23
+  },
+  "problem:803": {
+   "kind": "problem",
+   "id": "803",
+   "title": "Mini-Batch Gradient Descent Step for Linear Regression",
+   "difficulty": "medium",
+   "category": "Machine Learning",
+   "url": "https://www.deep-ml.com/problems/803",
+   "path": "problems/0803-mini-batch-gradient-descent-step-for-linear-regression",
+   "first_solved_at": "2026-10-22T13:05:04.445Z",
+   "last_pushed_at": "2026-10-22T13:32:43.928Z",
+   "language": "python",
+   "lines": 29
+  },
+  "problem:990": {
+   "kind": "problem",
+   "id": "990",
+   "title": "Learning Rate Range Finder for Linear Regression",
+   "difficulty": "easy",
+   "category": "Optimization",
+   "url": "https://www.deep-ml.com/problems/990",
+   "path": "problems/0990-learning-rate-range-finder-for-linear-regression",
+   "first_solved_at": "2026-10-22T13:57:22.718Z",
+   "last_pushed_at": "2026-10-22T13:57:22.718Z",
+   "language": "python",
+   "lines": 33
   }
  }
 }
